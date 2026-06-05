@@ -82,49 +82,47 @@ function CameraRig({ scrollRef, mouse, offsetX }) {
   return null
 }
 
-// slight-overshoot landing
-const easeOutBack = (x) => {
-  const c1 = 1.70158
-  const c3 = c1 + 1
-  return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2)
-}
+const easeInOutSine = (x) => -(Math.cos(Math.PI * x) - 1) / 2
 const DROP_FROM = 6 // above the top of the view
-const DROP_DUR = 1.4
+const DROP_DUR = 2.0 // seconds
+const DROP_DELAY = 0.35 // wait for the loader to finish clearing first
 
 function Crystal({ meshRef, mouse, offsetX, baseScale, dragging, dragPos, placed, started }) {
   const tmp = useMemo(() => new THREE.Vector3(), [])
   const introT = useRef(0)
+  const wait = useRef(0)
 
   useFrame((state, delta) => {
     const m = meshRef.current
     if (!m) return
     m.scale.setScalar(baseScale)
 
-    // intro: tumble down from above into resting position
-    if (!started) {
+    // hold off-screen above until the loader is gone
+    if (!started || wait.current < DROP_DELAY) {
+      if (started) wait.current += delta
       m.position.set(offsetX, DROP_FROM, 0)
-      m.rotation.y += delta * 0.14
       return
     }
+
     if (introT.current < 1) introT.current = Math.min(1, introT.current + delta / DROP_DUR)
     const p = introT.current
+    const e = easeInOutSine(p)
 
-    m.rotation.y += delta * 0.14
+    // a single clean roll, completing exactly as it lands
     if (p < 1) {
-      // fast roll that decays as it settles
-      m.rotation.x = (1 - p) * Math.PI * 4
-      m.rotation.z = (1 - p) * Math.PI * 2
+      m.rotation.x = (1 - p) * Math.PI * 2.2
+      m.rotation.z = 0
     } else {
       m.rotation.x = mouse.current.y * 0.3
       m.rotation.z = mouse.current.x * 0.15
+      m.rotation.y += delta * 0.14 // ambient spin only after it settles
     }
 
     const floatY = Math.sin(state.clock.elapsedTime * 0.5) * 0.06
     if (placed.current) {
       tmp.copy(dragPos.current)
     } else {
-      const restY = 0.1 + floatY
-      tmp.set(offsetX, THREE.MathUtils.lerp(DROP_FROM, restY, easeOutBack(p)), 0)
+      tmp.set(offsetX, THREE.MathUtils.lerp(DROP_FROM, 0.1 + floatY, e), 0)
     }
     m.position.lerp(tmp, dragging.current ? 0.4 : p < 1 ? 1 : 0.09)
   })
