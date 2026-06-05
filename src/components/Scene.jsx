@@ -39,30 +39,55 @@ function Backdrop({ scrollRef, mouse }) {
   )
 }
 
-function Crystal({ scrollRef, mouse }) {
-  const mesh = useRef()
-  const { viewport } = useThree()
+// Scroll-driven cinematic camera: dollies in and arcs while the look-at
+// target slides from screen-centre toward the crystal, pulling it from the
+// right edge into the focal centrepiece as you travel down the page.
+function CameraRig({ scrollRef, mouse, offsetX }) {
+  const { camera } = useThree()
+  const s = useRef(0)
+  const camPos = useMemo(() => new THREE.Vector3(0, 0, 5), [])
+  const target = useMemo(() => new THREE.Vector3(0, 0, 0), [])
 
-  // anchor a fixed margin from the right edge so it never clips off-screen;
-  // centered + smaller on mobile
-  const isNarrow = viewport.aspect < 1.0
-  const baseScale = isNarrow ? 0.6 : 0.9
-  const margin = 1.35 * baseScale + 0.35 // crystal radius * scale + gap
-  const offsetX = isNarrow ? 0 : viewport.width * 0.5 - margin
+  useFrame((_, delta) => {
+    const raw = THREE.MathUtils.clamp(scrollRef.current ?? 0, 0, 1)
+    s.current = THREE.MathUtils.damp(s.current, raw, 5, delta)
+    const e = THREE.MathUtils.smoothstep(s.current, 0, 1)
+
+    camPos.set(
+      THREE.MathUtils.lerp(0, offsetX * 0.5, e) +
+        Math.sin(s.current * Math.PI) * 0.7 +
+        mouse.current.x * 0.25,
+      THREE.MathUtils.lerp(0, 0.55, e) + mouse.current.y * 0.25,
+      THREE.MathUtils.lerp(5.0, 3.0, e)
+    )
+    camera.position.lerp(camPos, Math.min(1, delta * 4))
+
+    target.set(
+      THREE.MathUtils.lerp(0, offsetX * 0.7, THREE.MathUtils.smoothstep(s.current, 0, 0.6)),
+      0,
+      0
+    )
+    camera.lookAt(target)
+  })
+
+  return null
+}
+
+function Crystal({ mouse, offsetX, baseScale }) {
+  const mesh = useRef()
 
   useFrame((state, delta) => {
     if (!mesh.current) return
-    const scroll = scrollRef.current ?? 0
-    mesh.current.rotation.y += delta * 0.16
-    mesh.current.rotation.x = mouse.current.y * 0.4 + scroll * 2.0
-    mesh.current.rotation.z = mouse.current.x * 0.2
-    mesh.current.position.x = offsetX + mouse.current.x * 0.15
-    mesh.current.position.y = 0.35 + mouse.current.y * 0.15 + scroll * 3.0
-    mesh.current.scale.setScalar(baseScale * (1 - scroll * 0.25))
+    mesh.current.rotation.y += delta * 0.14
+    mesh.current.rotation.x = mouse.current.y * 0.3
+    mesh.current.rotation.z = mouse.current.x * 0.15
+    mesh.current.position.x = offsetX
+    mesh.current.position.y = 0.1 + Math.sin(state.clock.elapsedTime * 0.5) * 0.06
+    mesh.current.scale.setScalar(baseScale)
   })
 
   return (
-    <mesh ref={mesh} position={[offsetX, 0.35, 0]}>
+    <mesh ref={mesh} position={[offsetX, 0.1, 0]}>
       <icosahedronGeometry args={[1.35, 1]} />
       <MeshTransmissionMaterial
         flatShading
@@ -99,6 +124,7 @@ function IceEnvironment() {
 function Rig({ scrollRef }) {
   const mouse = useRef(new THREE.Vector2(0, 0))
   const target = useRef(new THREE.Vector2(0, 0))
+  const { viewport } = useThree()
 
   useEffect(() => {
     const onMove = (e) => {
@@ -115,12 +141,20 @@ function Rig({ scrollRef }) {
     mouse.current.lerp(target.current, Math.min(1, delta * 2.2))
   })
 
+  // layout: anchor the crystal a fixed margin in from the right edge
+  // (centred + smaller on mobile)
+  const isNarrow = viewport.aspect < 1.0
+  const baseScale = isNarrow ? 0.6 : 0.9
+  const margin = 1.35 * baseScale + 0.35
+  const offsetX = isNarrow ? 0 : viewport.width * 0.5 - margin
+
   return (
     <>
       <Backdrop scrollRef={scrollRef} mouse={mouse} />
       <ambientLight intensity={0.35} />
       <directionalLight position={[3, 4, 5]} intensity={1.1} />
-      <Crystal scrollRef={scrollRef} mouse={mouse} />
+      <Crystal mouse={mouse} offsetX={offsetX} baseScale={baseScale} />
+      <CameraRig scrollRef={scrollRef} mouse={mouse} offsetX={offsetX} />
       <IceEnvironment />
     </>
   )
