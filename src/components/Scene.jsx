@@ -265,13 +265,14 @@ function Rig({ scrollRef }) {
   )
 }
 
-export default function Scene({ scrollRef }) {
+export default function Scene({ scrollRef, onReady }) {
   return (
     <div className="scene-canvas">
       <Canvas
         gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
         dpr={[1, 1.75]}
         camera={{ position: [0, 0, 5], fov: 45 }}
+        onCreated={onReady}
       >
         <Rig scrollRef={scrollRef} />
         <Effects />

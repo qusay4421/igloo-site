@@ -1,9 +1,10 @@
-import { useRef, useLayoutEffect } from 'react'
+import { useRef, useState, useEffect, useLayoutEffect } from 'react'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import Scene from './components/Scene.jsx'
 import ScrambleText from './components/ScrambleText.jsx'
 import FullscreenToggle from './components/FullscreenToggle.jsx'
+import Preloader from './components/Preloader.jsx'
 import { useLenis } from './hooks/useLenis.js'
 
 gsap.registerPlugin(ScrollTrigger)
@@ -12,6 +13,40 @@ export default function App() {
   const scrollRef = useRef(0)
   const root = useRef(null)
   useLenis(scrollRef)
+
+  // ---- Preloader: count up while the WebGL scene initializes ----
+  const [progress, setProgress] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const sceneReady = useRef(false)
+
+  useEffect(() => {
+    let raf
+    const duration = 1800
+    const t0 = performance.now()
+    const tick = (now) => {
+      const k = Math.min(1, (now - t0) / duration)
+      const eased = 1 - Math.pow(1 - k, 3)
+      // hold below 100 until the scene has actually initialized
+      const ceil = sceneReady.current ? 100 : 92
+      setProgress(Math.min(ceil, Math.round(eased * 100)))
+      if (k >= 1 && sceneReady.current) {
+        setProgress(100)
+        setTimeout(() => setLoading(false), 350)
+      } else {
+        raf = requestAnimationFrame(tick)
+      }
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [])
+
+  // lock scroll while the preloader is up
+  useEffect(() => {
+    document.documentElement.style.overflow = loading ? 'hidden' : ''
+    return () => {
+      document.documentElement.style.overflow = ''
+    }
+  }, [loading])
 
   useLayoutEffect(() => {
     const ctx = gsap.context(() => {
@@ -41,7 +76,8 @@ export default function App() {
 
   return (
     <div ref={root}>
-      <Scene scrollRef={scrollRef} />
+      <Preloader progress={progress} hidden={!loading} />
+      <Scene scrollRef={scrollRef} onReady={() => (sceneReady.current = true)} />
       <div className="grain" />
 
       <nav className="nav">
@@ -63,10 +99,11 @@ export default function App() {
             className="hero__eyebrow"
             text="Interactive · WebGL · 2026"
             delay={150}
+            play={!loading}
           />
           <h1 className="hero__title">
-            <ScrambleText as="span" className="line" text="Frozen" delay={350} />
-            <ScrambleText as="span" className="line" text="in motion." delay={550} />
+            <ScrambleText as="span" className="line" text="Frozen" delay={350} play={!loading} />
+            <ScrambleText as="span" className="line" text="in motion." delay={550} play={!loading} />
           </h1>
           <ScrambleText
             as="p"
@@ -74,12 +111,14 @@ export default function App() {
             text="A studio experiment in real-time graphics, building toward the immersive, tactile web. Every frame is computed, not faked."
             delay={950}
             speed={1.1}
+            play={!loading}
           />
           <ScrambleText
             as="div"
             className="hero__scroll"
             text="Scroll to explore"
             delay={1300}
+            play={!loading}
           />
         </header>
 
@@ -118,7 +157,7 @@ export default function App() {
 
         <footer className="footer">
           <span>Built with React · R3F · GLSL · GSAP</span>
-          <span>v0.13 / 2026</span>
+          <span>v0.14 / 2026</span>
         </footer>
       </main>
     </div>

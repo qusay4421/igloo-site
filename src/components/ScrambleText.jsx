@@ -29,6 +29,7 @@ export default function ScrambleText({
   trigger = 'mount',
   delay = 0,
   speed = 1,
+  play = true,
 }) {
   const ref = useRef(null)
   const raf = useRef(0)
@@ -108,7 +109,7 @@ export default function ScrambleText({
         { threshold: [0, 0.35] }
       )
       io.observe(el)
-    } else {
+    } else if (play) {
       timer = setTimeout(animate, delay)
     }
 
@@ -117,7 +118,7 @@ export default function ScrambleText({
       if (io) io.disconnect()
       cancelAnimationFrame(raf.current)
     }
-  }, [text, trigger, delay, speed])
+  }, [text, trigger, delay, speed, play])
 
   return <Tag ref={ref} className={className} aria-label={text} />
 }
