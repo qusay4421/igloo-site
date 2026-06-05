@@ -1,4 +1,4 @@
-import { useRef, useMemo, useEffect } from 'react'
+import { useRef, useMemo, useEffect, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Environment, Lightformer, MeshTransmissionMaterial } from '@react-three/drei'
 import {
@@ -151,7 +151,8 @@ function Crystal({ meshRef, matRef, mouse, offsetX, baseScale, dragging, dragPos
         color="#dbf2ff"
         attenuationColor="#86c4ff"
         attenuationDistance={2.2}
-        resolution={512}
+        resolution={256}
+        samples={4}
         background={new THREE.Color('#05070d')}
       />
     </mesh>
@@ -206,25 +207,15 @@ function Rig({ scrollRef, started }) {
   const raycaster = useMemo(() => new THREE.Raycaster(), [])
   const dragPlane = useMemo(() => new THREE.Plane(new THREE.Vector3(0, 0, 1), 0), [])
 
+  // single pointer handler: feeds cursor-parallax AND grab/drag of the
+  // crystal (window-level so it works even though the canvas is
+  // pointer-events:none and the text sits on top)
   useEffect(() => {
-    const onMove = (e) => {
-      target.current.set(
-        (e.clientX / window.innerWidth) * 2 - 1,
-        -((e.clientY / window.innerHeight) * 2 - 1)
-      )
-    }
-    window.addEventListener('pointermove', onMove)
-    return () => window.removeEventListener('pointermove', onMove)
-  }, [])
-
-  // grab + drag the crystal (window-level so it works even though the
-  // canvas is pointer-events:none and the text sits on top)
-  useEffect(() => {
-    const setNdc = (e) => {
-      ndc.current.set(
-        (e.clientX / window.innerWidth) * 2 - 1,
-        -((e.clientY / window.innerHeight) * 2 - 1)
-      )
+    const setPointer = (e) => {
+      const nx = (e.clientX / window.innerWidth) * 2 - 1
+      const ny = -((e.clientY / window.innerHeight) * 2 - 1)
+      ndc.current.set(nx, ny)
+      target.current.set(nx, ny)
     }
     const overCrystal = () => {
       if (!meshRef.current) return false
@@ -236,7 +227,7 @@ function Rig({ scrollRef, started }) {
       raycaster.ray.intersectPlane(dragPlane, dragPos.current)
     }
     const onDown = (e) => {
-      setNdc(e)
+      setPointer(e)
       if (overCrystal()) {
         dragging.current = true
         placed.current = true
@@ -246,7 +237,7 @@ function Rig({ scrollRef, started }) {
       }
     }
     const onMove = (e) => {
-      setNdc(e)
+      setPointer(e)
       if (dragging.current) {
         toPlane()
         e.preventDefault()
@@ -304,11 +295,28 @@ function Rig({ scrollRef, started }) {
 }
 
 export default function Scene({ scrollRef, onReady, started = true }) {
+  // pause the render loop entirely while the tab is hidden (saves CPU/GPU/battery)
+  const [frameloop, setFrameloop] = useState('always')
+  useEffect(() => {
+    const onVis = () => setFrameloop(document.hidden ? 'never' : 'always')
+    document.addEventListener('visibilitychange', onVis)
+    return () => document.removeEventListener('visibilitychange', onVis)
+  }, [])
+
   return (
     <div className="scene-canvas">
       <Canvas
-        gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
-        dpr={[1, 1.75]}
+        frameloop={frameloop}
+        // AA handled by the EffectComposer (multisampling); canvas AA would
+        // be redundant work since we render through the composer.
+        gl={{
+          antialias: false,
+          alpha: false,
+          stencil: false,
+          depth: true,
+          powerPreference: 'high-performance',
+        }}
+        dpr={[1, 1.5]}
         camera={{ position: [0, 0, 5], fov: 45 }}
         onCreated={onReady}
       >

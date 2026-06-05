@@ -1,11 +1,13 @@
-import { useRef, useState, useEffect, useLayoutEffect } from 'react'
+import { useRef, useState, useEffect, useLayoutEffect, lazy, Suspense } from 'react'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import Scene from './components/Scene.jsx'
 import ScrambleText from './components/ScrambleText.jsx'
 import FullscreenToggle from './components/FullscreenToggle.jsx'
 import Preloader from './components/Preloader.jsx'
 import { useLenis } from './hooks/useLenis.js'
+
+// heavy WebGL stack (three/drei/postprocessing) split into its own chunk
+const Scene = lazy(() => import('./components/Scene.jsx'))
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -77,11 +79,13 @@ export default function App() {
   return (
     <div ref={root}>
       <Preloader progress={progress} hidden={!loading} />
-      <Scene
-        scrollRef={scrollRef}
-        started={!loading}
-        onReady={() => (sceneReady.current = true)}
-      />
+      <Suspense fallback={null}>
+        <Scene
+          scrollRef={scrollRef}
+          started={!loading}
+          onReady={() => (sceneReady.current = true)}
+        />
+      </Suspense>
       <div className="grain" />
 
       <nav className="nav">
@@ -161,7 +165,7 @@ export default function App() {
 
         <footer className="footer">
           <span>Built with React · R3F · GLSL · GSAP</span>
-          <span>v0.17 / 2026</span>
+          <span>v0.18 / 2026</span>
         </footer>
       </main>
     </div>

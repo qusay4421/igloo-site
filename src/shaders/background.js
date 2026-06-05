@@ -45,9 +45,11 @@ export const fragmentShader = /* glsl */ `
 
   float fbm(vec2 p) {
     float v = 0.0;
-    float amp = 0.55;
+    float amp = 0.6;
     mat2 rot = mat2(0.8, 0.6, -0.6, 0.8);
-    for (int i = 0; i < 6; i++) {
+    // 4 octaves: domain warping already adds apparent detail, so the
+    // top two octaves cost a lot for very little visible gain.
+    for (int i = 0; i < 4; i++) {
       v += amp * noise(p);
       p = rot * p * 2.0;
       amp *= 0.5;
