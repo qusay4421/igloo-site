@@ -56,16 +56,24 @@ canvas {
   pointer-events: none;
 }
 
+/* 3D centerpiece canvas — sits above the background, below the text */
+.fx-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
 .content {
   position: relative;
-  z-index: 1;
+  z-index: 2;
 }
 
 /* Grain overlay for texture */
 .grain {
   position: fixed;
   inset: 0;
-  z-index: 2;
+  z-index: 3;
   pointer-events: none;
   opacity: 0.045;
   mix-blend-mode: overlay;
