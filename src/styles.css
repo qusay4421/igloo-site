@@ -109,6 +109,11 @@ canvas {
   letter-spacing: 0.22em;
   font-size: 15px;
 }
+.nav__right {
+  display: flex;
+  align-items: center;
+  gap: 30px;
+}
 .nav__links {
   display: flex;
   gap: 34px;
@@ -125,6 +130,43 @@ canvas {
 @media (max-width: 720px) {
   .nav__links {
     display: none;
+  }
+}
+
+/* Fullscreen toggle */
+.fs-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  font-family: inherit;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fg);
+  background: rgba(127, 212, 255, 0.06);
+  border: 1px solid rgba(127, 212, 255, 0.25);
+  border-radius: 999px;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.35s var(--ease), border-color 0.35s var(--ease),
+    background 0.35s var(--ease);
+}
+.fs-btn:hover {
+  opacity: 1;
+  border-color: rgba(127, 212, 255, 0.6);
+  background: rgba(127, 212, 255, 0.12);
+}
+.fs-btn svg {
+  display: block;
+  color: var(--accent);
+}
+@media (max-width: 480px) {
+  .fs-btn__label {
+    display: none;
+  }
+  .fs-btn {
+    padding: 9px;
   }
 }
 

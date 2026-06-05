@@ -4,6 +4,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import ShaderBackground from './components/ShaderBackground.jsx'
 import IceCrystal from './components/IceCrystal.jsx'
 import ScrambleText from './components/ScrambleText.jsx'
+import FullscreenToggle from './components/FullscreenToggle.jsx'
 import { useLenis } from './hooks/useLenis.js'
 
 gsap.registerPlugin(ScrollTrigger)
@@ -47,10 +48,13 @@ export default function App() {
 
       <nav className="nav">
         <div className="nav__brand">IGLOO°</div>
-        <div className="nav__links">
-          <a href="#approach">Approach</a>
-          <a href="#craft">Craft</a>
-          <a href="#next">Next</a>
+        <div className="nav__right">
+          <div className="nav__links">
+            <a href="#approach">Approach</a>
+            <a href="#craft">Craft</a>
+            <a href="#next">Next</a>
+          </div>
+          <FullscreenToggle />
         </div>
       </nav>
 
@@ -116,7 +120,7 @@ export default function App() {
 
         <footer className="footer">
           <span>Built with React · R3F · GLSL · GSAP</span>
-          <span>v0.6 / 2026</span>
+          <span>v0.7 / 2026</span>
         </footer>
       </main>
     </div>
