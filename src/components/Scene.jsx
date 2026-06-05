@@ -1,6 +1,15 @@
 import { useRef, useMemo, useEffect } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Environment, Lightformer, MeshTransmissionMaterial } from '@react-three/drei'
+import {
+  EffectComposer,
+  Bloom,
+  DepthOfField,
+  ChromaticAberration,
+  Vignette,
+  Noise,
+} from '@react-three/postprocessing'
+import { BlendFunction } from 'postprocessing'
 import * as THREE from 'three'
 import { vertexShader, fragmentShader } from '../shaders/background.js'
 
@@ -121,6 +130,28 @@ function IceEnvironment() {
   )
 }
 
+// Cinematic colour-grade pass: glow on the bright ice crests, a hair of
+// lens colour-fringe, gentle depth blur, vignette, and fine film grain.
+function Effects() {
+  return (
+    <EffectComposer disableNormalPass multisampling={4}>
+      <DepthOfField focusDistance={0.012} focalLength={0.025} bokehScale={1.6} />
+      <Bloom
+        intensity={0.55}
+        luminanceThreshold={0.55}
+        luminanceSmoothing={0.25}
+        mipmapBlur
+      />
+      <ChromaticAberration
+        blendFunction={BlendFunction.NORMAL}
+        offset={[0.0006, 0.0006]}
+      />
+      <Vignette eskil={false} offset={0.28} darkness={0.72} />
+      <Noise premultiply blendFunction={BlendFunction.OVERLAY} opacity={0.16} />
+    </EffectComposer>
+  )
+}
+
 function Rig({ scrollRef }) {
   const mouse = useRef(new THREE.Vector2(0, 0))
   const target = useRef(new THREE.Vector2(0, 0))
@@ -169,6 +200,7 @@ export default function Scene({ scrollRef }) {
         camera={{ position: [0, 0, 5], fov: 45 }}
       >
         <Rig scrollRef={scrollRef} />
+        <Effects />
       </Canvas>
     </div>
   )
