@@ -82,21 +82,25 @@ function CameraRig({ scrollRef, mouse, offsetX }) {
   return null
 }
 
-function Crystal({ mouse, offsetX, baseScale }) {
-  const mesh = useRef()
+function Crystal({ meshRef, mouse, offsetX, baseScale, dragging, dragPos, placed }) {
+  const tmp = useMemo(() => new THREE.Vector3(), [])
 
   useFrame((state, delta) => {
-    if (!mesh.current) return
-    mesh.current.rotation.y += delta * 0.14
-    mesh.current.rotation.x = mouse.current.y * 0.3
-    mesh.current.rotation.z = mouse.current.x * 0.15
-    mesh.current.position.x = offsetX
-    mesh.current.position.y = 0.1 + Math.sin(state.clock.elapsedTime * 0.5) * 0.06
-    mesh.current.scale.setScalar(baseScale)
+    const m = meshRef.current
+    if (!m) return
+    m.rotation.y += delta * 0.14
+    m.rotation.x = mouse.current.y * 0.3
+    m.rotation.z = mouse.current.x * 0.15
+
+    const floatY = Math.sin(state.clock.elapsedTime * 0.5) * 0.06
+    if (placed.current) tmp.copy(dragPos.current)
+    else tmp.set(offsetX, 0.1 + floatY, 0)
+    m.position.lerp(tmp, dragging.current ? 0.4 : 0.09)
+    m.scale.setScalar(baseScale)
   })
 
   return (
-    <mesh ref={mesh} position={[offsetX, 0.1, 0]}>
+    <mesh ref={meshRef} position={[offsetX, 0.1, 0]}>
       <icosahedronGeometry args={[1.35, 1]} />
       <MeshTransmissionMaterial
         flatShading
@@ -155,7 +159,16 @@ function Effects() {
 function Rig({ scrollRef }) {
   const mouse = useRef(new THREE.Vector2(0, 0))
   const target = useRef(new THREE.Vector2(0, 0))
-  const { viewport } = useThree()
+  const { viewport, camera } = useThree()
+
+  // drag state for the grabbable crystal
+  const meshRef = useRef()
+  const dragging = useRef(false)
+  const placed = useRef(false)
+  const dragPos = useRef(new THREE.Vector3())
+  const ndc = useRef(new THREE.Vector2())
+  const raycaster = useMemo(() => new THREE.Raycaster(), [])
+  const dragPlane = useMemo(() => new THREE.Plane(new THREE.Vector3(0, 0, 1), 0), [])
 
   useEffect(() => {
     const onMove = (e) => {
@@ -167,6 +180,59 @@ function Rig({ scrollRef }) {
     window.addEventListener('pointermove', onMove)
     return () => window.removeEventListener('pointermove', onMove)
   }, [])
+
+  // grab + drag the crystal (window-level so it works even though the
+  // canvas is pointer-events:none and the text sits on top)
+  useEffect(() => {
+    const setNdc = (e) => {
+      ndc.current.set(
+        (e.clientX / window.innerWidth) * 2 - 1,
+        -((e.clientY / window.innerHeight) * 2 - 1)
+      )
+    }
+    const overCrystal = () => {
+      if (!meshRef.current) return false
+      raycaster.setFromCamera(ndc.current, camera)
+      return raycaster.intersectObject(meshRef.current, false).length > 0
+    }
+    const toPlane = () => {
+      raycaster.setFromCamera(ndc.current, camera)
+      raycaster.ray.intersectPlane(dragPlane, dragPos.current)
+    }
+    const onDown = (e) => {
+      setNdc(e)
+      if (overCrystal()) {
+        dragging.current = true
+        placed.current = true
+        toPlane()
+        document.body.style.cursor = 'grabbing'
+        e.preventDefault()
+      }
+    }
+    const onMove = (e) => {
+      setNdc(e)
+      if (dragging.current) {
+        toPlane()
+        e.preventDefault()
+      } else {
+        document.body.style.cursor = overCrystal() ? 'grab' : ''
+      }
+    }
+    const onUp = () => {
+      if (dragging.current) {
+        dragging.current = false
+        document.body.style.cursor = ''
+      }
+    }
+    window.addEventListener('pointerdown', onDown)
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+    return () => {
+      window.removeEventListener('pointerdown', onDown)
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+    }
+  }, [camera, raycaster, dragPlane])
 
   useFrame((_, delta) => {
     mouse.current.lerp(target.current, Math.min(1, delta * 2.2))
@@ -184,7 +250,15 @@ function Rig({ scrollRef }) {
       <Backdrop scrollRef={scrollRef} mouse={mouse} />
       <ambientLight intensity={0.35} />
       <directionalLight position={[3, 4, 5]} intensity={1.1} />
-      <Crystal mouse={mouse} offsetX={offsetX} baseScale={baseScale} />
+      <Crystal
+        meshRef={meshRef}
+        mouse={mouse}
+        offsetX={offsetX}
+        baseScale={baseScale}
+        dragging={dragging}
+        dragPos={dragPos}
+        placed={placed}
+      />
       <CameraRig scrollRef={scrollRef} mouse={mouse} offsetX={offsetX} />
       <IceEnvironment />
     </>
