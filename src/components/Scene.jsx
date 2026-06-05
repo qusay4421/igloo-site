@@ -43,10 +43,12 @@ function Crystal({ scrollRef, mouse }) {
   const mesh = useRef()
   const { viewport } = useThree()
 
-  // keep it in the right third on desktop; centered + smaller on mobile
+  // anchor a fixed margin from the right edge so it never clips off-screen;
+  // centered + smaller on mobile
   const isNarrow = viewport.aspect < 1.0
-  const offsetX = isNarrow ? 0 : viewport.width * 0.34
-  const baseScale = isNarrow ? 0.6 : 0.95
+  const baseScale = isNarrow ? 0.6 : 0.9
+  const margin = 1.35 * baseScale + 0.35 // crystal radius * scale + gap
+  const offsetX = isNarrow ? 0 : viewport.width * 0.5 - margin
 
   useFrame((state, delta) => {
     if (!mesh.current) return
