@@ -82,21 +82,51 @@ function CameraRig({ scrollRef, mouse, offsetX }) {
   return null
 }
 
-function Crystal({ meshRef, mouse, offsetX, baseScale, dragging, dragPos, placed }) {
+// slight-overshoot landing
+const easeOutBack = (x) => {
+  const c1 = 1.70158
+  const c3 = c1 + 1
+  return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2)
+}
+const DROP_FROM = 6 // above the top of the view
+const DROP_DUR = 1.4
+
+function Crystal({ meshRef, mouse, offsetX, baseScale, dragging, dragPos, placed, started }) {
   const tmp = useMemo(() => new THREE.Vector3(), [])
+  const introT = useRef(0)
 
   useFrame((state, delta) => {
     const m = meshRef.current
     if (!m) return
+    m.scale.setScalar(baseScale)
+
+    // intro: tumble down from above into resting position
+    if (!started) {
+      m.position.set(offsetX, DROP_FROM, 0)
+      m.rotation.y += delta * 0.14
+      return
+    }
+    if (introT.current < 1) introT.current = Math.min(1, introT.current + delta / DROP_DUR)
+    const p = introT.current
+
     m.rotation.y += delta * 0.14
-    m.rotation.x = mouse.current.y * 0.3
-    m.rotation.z = mouse.current.x * 0.15
+    if (p < 1) {
+      // fast roll that decays as it settles
+      m.rotation.x = (1 - p) * Math.PI * 4
+      m.rotation.z = (1 - p) * Math.PI * 2
+    } else {
+      m.rotation.x = mouse.current.y * 0.3
+      m.rotation.z = mouse.current.x * 0.15
+    }
 
     const floatY = Math.sin(state.clock.elapsedTime * 0.5) * 0.06
-    if (placed.current) tmp.copy(dragPos.current)
-    else tmp.set(offsetX, 0.1 + floatY, 0)
-    m.position.lerp(tmp, dragging.current ? 0.4 : 0.09)
-    m.scale.setScalar(baseScale)
+    if (placed.current) {
+      tmp.copy(dragPos.current)
+    } else {
+      const restY = 0.1 + floatY
+      tmp.set(offsetX, THREE.MathUtils.lerp(DROP_FROM, restY, easeOutBack(p)), 0)
+    }
+    m.position.lerp(tmp, dragging.current ? 0.4 : p < 1 ? 1 : 0.09)
   })
 
   return (
@@ -156,7 +186,7 @@ function Effects() {
   )
 }
 
-function Rig({ scrollRef }) {
+function Rig({ scrollRef, started }) {
   const mouse = useRef(new THREE.Vector2(0, 0))
   const target = useRef(new THREE.Vector2(0, 0))
   const { viewport, camera } = useThree()
@@ -258,6 +288,7 @@ function Rig({ scrollRef }) {
         dragging={dragging}
         dragPos={dragPos}
         placed={placed}
+        started={started}
       />
       <CameraRig scrollRef={scrollRef} mouse={mouse} offsetX={offsetX} />
       <IceEnvironment />
@@ -265,7 +296,7 @@ function Rig({ scrollRef }) {
   )
 }
 
-export default function Scene({ scrollRef, onReady }) {
+export default function Scene({ scrollRef, onReady, started = true }) {
   return (
     <div className="scene-canvas">
       <Canvas
@@ -274,7 +305,7 @@ export default function Scene({ scrollRef, onReady }) {
         camera={{ position: [0, 0, 5], fov: 45 }}
         onCreated={onReady}
       >
-        <Rig scrollRef={scrollRef} />
+        <Rig scrollRef={scrollRef} started={started} />
         <Effects />
       </Canvas>
     </div>

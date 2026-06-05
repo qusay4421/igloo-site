@@ -77,7 +77,11 @@ export default function App() {
   return (
     <div ref={root}>
       <Preloader progress={progress} hidden={!loading} />
-      <Scene scrollRef={scrollRef} onReady={() => (sceneReady.current = true)} />
+      <Scene
+        scrollRef={scrollRef}
+        started={!loading}
+        onReady={() => (sceneReady.current = true)}
+      />
       <div className="grain" />
 
       <nav className="nav">
@@ -157,7 +161,7 @@ export default function App() {
 
         <footer className="footer">
           <span>Built with React · R3F · GLSL · GSAP</span>
-          <span>v0.14 / 2026</span>
+          <span>v0.15 / 2026</span>
         </footer>
       </main>
     </div>
