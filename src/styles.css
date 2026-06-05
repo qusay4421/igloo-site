@@ -48,19 +48,11 @@ canvas {
   display: block;
 }
 
-/* Fixed shader canvas behind everything */
-.bg-canvas {
+/* Unified 3D scene (shader backdrop + refracting crystal) behind the content */
+.scene-canvas {
   position: fixed;
   inset: 0;
   z-index: 0;
-  pointer-events: none;
-}
-
-/* 3D centerpiece canvas — sits above the background, below the text */
-.fx-canvas {
-  position: fixed;
-  inset: 0;
-  z-index: 1;
   pointer-events: none;
 }
 

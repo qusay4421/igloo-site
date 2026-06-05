@@ -1,8 +1,7 @@
 import { useRef, useLayoutEffect } from 'react'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import ShaderBackground from './components/ShaderBackground.jsx'
-import IceCrystal from './components/IceCrystal.jsx'
+import Scene from './components/Scene.jsx'
 import ScrambleText from './components/ScrambleText.jsx'
 import FullscreenToggle from './components/FullscreenToggle.jsx'
 import { useLenis } from './hooks/useLenis.js'
@@ -42,8 +41,7 @@ export default function App() {
 
   return (
     <div ref={root}>
-      <ShaderBackground scrollRef={scrollRef} />
-      <IceCrystal scrollRef={scrollRef} />
+      <Scene scrollRef={scrollRef} />
       <div className="grain" />
 
       <nav className="nav">
@@ -120,7 +118,7 @@ export default function App() {
 
         <footer className="footer">
           <span>Built with React · R3F · GLSL · GSAP</span>
-          <span>v0.8 / 2026</span>
+          <span>v0.9 / 2026</span>
         </footer>
       </main>
     </div>
