@@ -87,7 +87,7 @@ const DROP_FROM = 6 // above the top of the view
 const DROP_DUR = 2.0 // seconds
 const DROP_DELAY = 0.35 // wait for the loader to finish clearing first
 
-function Crystal({ meshRef, mouse, offsetX, baseScale, dragging, dragPos, placed, started }) {
+function Crystal({ meshRef, matRef, mouse, offsetX, baseScale, dragging, dragPos, placed, started }) {
   const tmp = useMemo(() => new THREE.Vector3(), [])
   const introT = useRef(0)
   const wait = useRef(0)
@@ -95,18 +95,23 @@ function Crystal({ meshRef, mouse, offsetX, baseScale, dragging, dragPos, placed
   useFrame((state, delta) => {
     const m = meshRef.current
     if (!m) return
-    m.scale.setScalar(baseScale)
 
-    // hold off-screen above until the loader is gone
+    // hold invisible & off-screen above until the loader is gone
     if (!started || wait.current < DROP_DELAY) {
       if (started) wait.current += delta
       m.position.set(offsetX, DROP_FROM, 0)
+      m.scale.setScalar(baseScale)
+      if (matRef.current) matRef.current.opacity = 0
       return
     }
 
     if (introT.current < 1) introT.current = Math.min(1, introT.current + delta / DROP_DUR)
     const p = introT.current
     const e = easeInOutSine(p)
+
+    // fade + scale in so it materializes gradually rather than popping
+    if (matRef.current) matRef.current.opacity = THREE.MathUtils.clamp(p * 1.8, 0, 1)
+    m.scale.setScalar(baseScale * THREE.MathUtils.lerp(0.82, 1, e))
 
     // a single clean roll, completing exactly as it lands
     if (p < 1) {
@@ -131,6 +136,8 @@ function Crystal({ meshRef, mouse, offsetX, baseScale, dragging, dragPos, placed
     <mesh ref={meshRef} position={[offsetX, 0.1, 0]}>
       <icosahedronGeometry args={[1.35, 1]} />
       <MeshTransmissionMaterial
+        ref={matRef}
+        transparent
         flatShading
         transmission={1}
         thickness={1.4}
@@ -191,6 +198,7 @@ function Rig({ scrollRef, started }) {
 
   // drag state for the grabbable crystal
   const meshRef = useRef()
+  const matRef = useRef()
   const dragging = useRef(false)
   const placed = useRef(false)
   const dragPos = useRef(new THREE.Vector3())
@@ -280,6 +288,7 @@ function Rig({ scrollRef, started }) {
       <directionalLight position={[3, 4, 5]} intensity={1.1} />
       <Crystal
         meshRef={meshRef}
+        matRef={matRef}
         mouse={mouse}
         offsetX={offsetX}
         baseScale={baseScale}

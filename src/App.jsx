@@ -161,7 +161,7 @@ export default function App() {
 
         <footer className="footer">
           <span>Built with React · R3F · GLSL · GSAP</span>
-          <span>v0.16 / 2026</span>
+          <span>v0.17 / 2026</span>
         </footer>
       </main>
     </div>
