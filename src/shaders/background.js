@@ -76,20 +76,28 @@ export const fragmentShader = /* glsl */ `
     );
     float f = fbm(p * 1.6 + 3.0 * r + t);
 
-    // glacial palette: deep navy -> teal -> ice cyan -> white crest
-    vec3 deep  = vec3(0.012, 0.027, 0.062);
-    vec3 mid   = vec3(0.043, 0.18, 0.34);
-    vec3 ice   = vec3(0.33, 0.74, 0.92);
+    // palette JOURNEY driven by scroll: glacial blue (top) -> aurora teal
+    // (mid) -> soft dawn violet (deep), so descending feels like travelling.
+    float sp = clamp(uScroll, 0.0, 1.0);
+    vec3 deep = vec3(0.012, 0.027, 0.062);
+    vec3 midA = vec3(0.043, 0.18, 0.34);
+    vec3 midB = vec3(0.03, 0.22, 0.28);
+    vec3 midC = vec3(0.16, 0.12, 0.34);
+    vec3 iceA = vec3(0.33, 0.74, 0.92);
+    vec3 iceB = vec3(0.28, 0.86, 0.78);
+    vec3 iceC = vec3(0.66, 0.58, 0.96);
+    vec3 mid = sp < 0.5 ? mix(midA, midB, sp * 2.0) : mix(midB, midC, (sp - 0.5) * 2.0);
+    vec3 ice = sp < 0.5 ? mix(iceA, iceB, sp * 2.0) : mix(iceB, iceC, (sp - 0.5) * 2.0);
     vec3 crest = vec3(0.88, 0.96, 1.0);
 
     vec3 col = mix(deep, mid, smoothstep(-0.35, 0.25, f));
     col = mix(col, ice, smoothstep(0.18, 0.6, length(r)));
     col = mix(col, crest, smoothstep(0.72, 0.98, f * 0.6 + length(q) * 0.5));
 
-    // depth darkening toward edges + scroll cools the scene
+    // depth darkening toward edges + slight scroll cooling
     float vig = smoothstep(1.15, 0.25, length(uv - 0.5));
     col *= mix(0.45, 1.0, vig);
-    col *= mix(1.0, 0.7, uScroll);
+    col *= mix(1.0, 0.85, sp);
 
     // faint scanline-free dithering to avoid banding
     float dither = (hash2(uv * uResolution).x) * 0.012;
