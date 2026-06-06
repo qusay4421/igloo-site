@@ -86,6 +86,10 @@ const easeInOutSine = (x) => -(Math.cos(Math.PI * x) - 1) / 2
 const DROP_FROM = 6 // above the top of the view
 const DROP_DUR = 2.0 // seconds
 const DROP_DELAY = 0.35 // wait for the loader to finish clearing first
+// fixed world axes so drag direction stays consistent no matter how far the
+// crystal has already turned (avoids the flipped-axis trackball problem)
+const WORLD_X = new THREE.Vector3(1, 0, 0)
+const WORLD_Y = new THREE.Vector3(0, 1, 0)
 
 function Crystal({ meshRef, matRef, offsetX, baseScale, spinning, spinVel, started }) {
   const introT = useRef(0)
@@ -120,13 +124,14 @@ function Crystal({ meshRef, matRef, offsetX, baseScale, spinning, spinVel, start
       m.rotation.z = 0
       m.position.set(offsetX, THREE.MathUtils.lerp(DROP_FROM, 0.1 + floatY, e), 0)
     } else {
-      // spin from click-drag: apply angular velocity in the drag direction,
+      // spin from click-drag: apply angular velocity around WORLD axes (so
+      // drag direction is consistent regardless of current orientation),
       // with momentum that decays after release (idle drift when at rest)
-      m.rotation.y += spinVel.current.x * 0.006
-      m.rotation.x += spinVel.current.y * 0.006
+      m.rotateOnWorldAxis(WORLD_Y, spinVel.current.x * 0.006)
+      m.rotateOnWorldAxis(WORLD_X, spinVel.current.y * 0.006)
       spinVel.current.multiplyScalar(spinning.current ? 0.6 : 0.94)
       if (!spinning.current && spinVel.current.lengthSq() < 0.02) {
-        m.rotation.y += delta * 0.12
+        m.rotateOnWorldAxis(WORLD_Y, delta * 0.12)
       }
       m.position.set(offsetX, 0.1 + floatY, 0)
     }
