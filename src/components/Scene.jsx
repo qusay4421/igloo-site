@@ -59,7 +59,10 @@ function CameraRig({ scrollRef, mouse, offsetX }) {
 
   useFrame((_, delta) => {
     const raw = THREE.MathUtils.clamp(scrollRef.current ?? 0, 0, 1)
-    s.current = THREE.MathUtils.damp(s.current, raw, 5, delta)
+    // single smoother on the scroll value; the camera is then a pure
+    // deterministic function of it, so the path is identical up and down
+    // (no compounding lag / no failing to retrace on fast scroll)
+    s.current = THREE.MathUtils.damp(s.current, raw, 8, delta)
     const e = THREE.MathUtils.smoothstep(s.current, 0, 1)
 
     camPos.set(
@@ -67,7 +70,7 @@ function CameraRig({ scrollRef, mouse, offsetX }) {
       THREE.MathUtils.lerp(0, 1.0, e) + mouse.current.y * 0.4,
       THREE.MathUtils.lerp(5, -22, e) // travel forward through the field
     )
-    camera.position.lerp(camPos, Math.min(1, delta * 4))
+    camera.position.copy(camPos)
 
     // look at the crystal first, then ahead down the corridor
     target.set(
