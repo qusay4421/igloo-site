@@ -1,4 +1,4 @@
-import { useRef, useMemo, useEffect, useState } from 'react'
+import { useRef, useMemo, useEffect, useState, useLayoutEffect } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Environment, Lightformer, MeshTransmissionMaterial } from '@react-three/drei'
 import {
@@ -48,9 +48,9 @@ function Backdrop({ scrollRef, mouse }) {
   )
 }
 
-// Scroll-driven cinematic camera: dollies in and arcs while the look-at
-// target slides from screen-centre toward the crystal, pulling it from the
-// right edge into the focal centrepiece as you travel down the page.
+// Scroll-driven cinematic camera: starts framing the hero crystal on the
+// right, then flies FORWARD through the fogged ice field, gently wandering,
+// with the look-at swinging from the crystal to straight down the corridor.
 function CameraRig({ scrollRef, mouse, offsetX }) {
   const { camera } = useThree()
   const s = useRef(0)
@@ -63,23 +63,77 @@ function CameraRig({ scrollRef, mouse, offsetX }) {
     const e = THREE.MathUtils.smoothstep(s.current, 0, 1)
 
     camPos.set(
-      THREE.MathUtils.lerp(0, offsetX * 0.5, e) +
-        Math.sin(s.current * Math.PI) * 0.7 +
-        mouse.current.x * 0.25,
-      THREE.MathUtils.lerp(0, 0.55, e) + mouse.current.y * 0.25,
-      THREE.MathUtils.lerp(5.0, 3.0, e)
+      Math.sin(e * Math.PI * 1.4) * 1.4 + mouse.current.x * 0.4,
+      THREE.MathUtils.lerp(0, 1.0, e) + mouse.current.y * 0.4,
+      THREE.MathUtils.lerp(5, -22, e) // travel forward through the field
     )
     camera.position.lerp(camPos, Math.min(1, delta * 4))
 
+    // look at the crystal first, then ahead down the corridor
     target.set(
-      THREE.MathUtils.lerp(0, offsetX * 0.7, THREE.MathUtils.smoothstep(s.current, 0, 0.6)),
+      THREE.MathUtils.lerp(offsetX * 0.7, 0, THREE.MathUtils.smoothstep(s.current, 0, 0.4)),
       0,
-      0
+      camPos.z - 6
     )
     camera.lookAt(target)
   })
 
   return null
+}
+
+// A fogged field of ice shards scattered through depth — one instanced draw
+// call. Gives the scene real parallax/volume so the camera flies THROUGH
+// space rather than arcing in front of a flat backdrop.
+function IceField() {
+  const ref = useRef()
+  const count = 70
+  const dummy = useMemo(() => new THREE.Object3D(), [])
+  const shards = useMemo(
+    () =>
+      Array.from({ length: count }, () => ({
+        p: [
+          (Math.random() - 0.5) * 18,
+          (Math.random() - 0.5) * 12,
+          -1 - Math.random() * 38,
+        ],
+        r: [
+          Math.random() * Math.PI * 2,
+          Math.random() * Math.PI * 2,
+          Math.random() * Math.PI * 2,
+        ],
+        s: 0.12 + Math.random() * 0.7,
+      })),
+    []
+  )
+
+  useLayoutEffect(() => {
+    shards.forEach((d, i) => {
+      dummy.position.set(d.p[0], d.p[1], d.p[2])
+      dummy.rotation.set(d.r[0], d.r[1], d.r[2])
+      dummy.scale.setScalar(d.s)
+      dummy.updateMatrix()
+      ref.current.setMatrixAt(i, dummy.matrix)
+    })
+    ref.current.instanceMatrix.needsUpdate = true
+  }, [shards, dummy])
+
+  useFrame((state) => {
+    if (ref.current) ref.current.rotation.z = Math.sin(state.clock.elapsedTime * 0.05) * 0.06
+  })
+
+  return (
+    <instancedMesh ref={ref} args={[undefined, undefined, count]} frustumCulled={false}>
+      <icosahedronGeometry args={[1, 0]} />
+      <meshStandardMaterial
+        color="#3b6e9c"
+        roughness={0.4}
+        metalness={0.15}
+        flatShading
+        emissive="#0b2238"
+        emissiveIntensity={0.5}
+      />
+    </instancedMesh>
+  )
 }
 
 const easeInOutSine = (x) => -(Math.cos(Math.PI * x) - 1) / 2
@@ -281,9 +335,11 @@ function Rig({ scrollRef, started }) {
 
   return (
     <>
+      <fog attach="fog" args={['#060d1a', 7, 40]} />
       <Backdrop scrollRef={scrollRef} mouse={mouse} />
       <ambientLight intensity={0.35} />
       <directionalLight position={[3, 4, 5]} intensity={1.1} />
+      <IceField />
       <Crystal
         meshRef={meshRef}
         matRef={matRef}
