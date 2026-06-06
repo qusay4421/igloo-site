@@ -6,6 +6,8 @@ import FullscreenToggle from './components/FullscreenToggle.jsx'
 import Preloader from './components/Preloader.jsx'
 import CustomCursor from './components/CustomCursor.jsx'
 import Magnetic from './components/Magnetic.jsx'
+import SoundToggle from './components/SoundToggle.jsx'
+import { audio } from './audio.js'
 import { useLenis } from './hooks/useLenis.js'
 
 // heavy WebGL stack (three/drei/postprocessing) split into its own chunk
@@ -96,15 +98,24 @@ export default function App() {
         <div className="nav__right">
           <div className="nav__links">
             <Magnetic>
-              <a href="#approach">Approach</a>
+              <a href="#approach" onMouseEnter={() => audio.tick()}>
+                Approach
+              </a>
             </Magnetic>
             <Magnetic>
-              <a href="#craft">Craft</a>
+              <a href="#craft" onMouseEnter={() => audio.tick()}>
+                Craft
+              </a>
             </Magnetic>
             <Magnetic>
-              <a href="#next">Next</a>
+              <a href="#next" onMouseEnter={() => audio.tick()}>
+                Next
+              </a>
             </Magnetic>
           </div>
+          <Magnetic>
+            <SoundToggle />
+          </Magnetic>
           <Magnetic>
             <FullscreenToggle />
           </Magnetic>
@@ -176,7 +187,7 @@ export default function App() {
 
         <footer className="footer">
           <span>Built with React · R3F · GLSL · GSAP</span>
-          <span>v0.21 / 2026</span>
+          <span>v0.22 / 2026</span>
         </footer>
       </main>
     </div>

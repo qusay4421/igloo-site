@@ -73,6 +73,33 @@ canvas {
   will-change: transform;
 }
 
+/* Sound toggle */
+.snd-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  font-family: inherit;
+  color: var(--accent);
+  background: rgba(127, 212, 255, 0.06);
+  border: 1px solid rgba(127, 212, 255, 0.25);
+  border-radius: 999px;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.35s var(--ease), border-color 0.35s var(--ease),
+    background 0.35s var(--ease);
+}
+.snd-btn:hover {
+  opacity: 1;
+  border-color: rgba(127, 212, 255, 0.6);
+  background: rgba(127, 212, 255, 0.12);
+}
+.snd-btn svg {
+  display: block;
+}
+
 /* ---------- Preloader ---------- */
 .preloader {
   position: fixed;
