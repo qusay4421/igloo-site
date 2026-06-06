@@ -226,13 +226,19 @@ function Rig({ scrollRef, started }) {
       raycaster.setFromCamera(ndc.current, camera)
       raycaster.ray.intersectPlane(dragPlane, dragPos.current)
     }
+    const setCursor = (v) => {
+      // body cursor = fallback when the custom cursor is off (touch / no support);
+      // dataset.cursor = signal the custom cursor reads for its grab states
+      document.body.style.cursor = v
+      document.documentElement.dataset.cursor = v
+    }
     const onDown = (e) => {
       setPointer(e)
       if (overCrystal()) {
         dragging.current = true
         placed.current = true
         toPlane()
-        document.body.style.cursor = 'grabbing'
+        setCursor('grabbing')
         e.preventDefault()
       }
     }
@@ -242,13 +248,13 @@ function Rig({ scrollRef, started }) {
         toPlane()
         e.preventDefault()
       } else {
-        document.body.style.cursor = overCrystal() ? 'grab' : ''
+        setCursor(overCrystal() ? 'grab' : '')
       }
     }
     const onUp = () => {
       if (dragging.current) {
         dragging.current = false
-        document.body.style.cursor = ''
+        setCursor('')
       }
     }
     window.addEventListener('pointerdown', onDown)

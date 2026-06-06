@@ -4,6 +4,8 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import ScrambleText from './components/ScrambleText.jsx'
 import FullscreenToggle from './components/FullscreenToggle.jsx'
 import Preloader from './components/Preloader.jsx'
+import CustomCursor from './components/CustomCursor.jsx'
+import Magnetic from './components/Magnetic.jsx'
 import { useLenis } from './hooks/useLenis.js'
 
 // heavy WebGL stack (three/drei/postprocessing) split into its own chunk
@@ -78,6 +80,7 @@ export default function App() {
 
   return (
     <div ref={root}>
+      <CustomCursor />
       <Preloader progress={progress} hidden={!loading} />
       <Suspense fallback={null}>
         <Scene
@@ -92,11 +95,19 @@ export default function App() {
         <div className="nav__brand">IGLOO°</div>
         <div className="nav__right">
           <div className="nav__links">
-            <a href="#approach">Approach</a>
-            <a href="#craft">Craft</a>
-            <a href="#next">Next</a>
+            <Magnetic>
+              <a href="#approach">Approach</a>
+            </Magnetic>
+            <Magnetic>
+              <a href="#craft">Craft</a>
+            </Magnetic>
+            <Magnetic>
+              <a href="#next">Next</a>
+            </Magnetic>
           </div>
-          <FullscreenToggle />
+          <Magnetic>
+            <FullscreenToggle />
+          </Magnetic>
         </div>
       </nav>
 
@@ -165,7 +176,7 @@ export default function App() {
 
         <footer className="footer">
           <span>Built with React · R3F · GLSL · GSAP</span>
-          <span>v0.18 / 2026</span>
+          <span>v0.19 / 2026</span>
         </footer>
       </main>
     </div>
