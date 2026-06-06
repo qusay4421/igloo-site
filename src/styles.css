@@ -55,43 +55,16 @@ canvas {
     cursor: none !important;
   }
 }
-.cursor-dot,
-.cursor-ring {
+.cursor-dot {
   position: fixed;
   top: 0;
   left: 0;
   z-index: 60;
   pointer-events: none;
   border-radius: 50%;
-  mix-blend-mode: difference;
-}
-.cursor-dot {
-  width: 6px;
-  height: 6px;
-  background: #eaf2ff;
-}
-.cursor-ring {
-  width: 34px;
-  height: 34px;
-  border: 1px solid rgba(234, 242, 255, 0.7);
-  transition: width 0.28s var(--ease), height 0.28s var(--ease),
-    background 0.28s var(--ease), border-color 0.28s var(--ease),
-    opacity 0.28s var(--ease);
-}
-.cursor-ring[data-state='link'] {
-  width: 56px;
-  height: 56px;
-  background: rgba(234, 242, 255, 0.1);
-}
-.cursor-ring[data-state='grab'] {
-  width: 66px;
-  height: 66px;
-  border-color: #eaf2ff;
-}
-.cursor-ring[data-state='grabbing'] {
-  width: 46px;
-  height: 46px;
-  background: rgba(234, 242, 255, 0.18);
+  width: 18px;
+  height: 18px;
+  background: #ffffff;
 }
 
 .magnetic {

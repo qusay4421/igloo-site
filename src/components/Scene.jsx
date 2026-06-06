@@ -87,8 +87,7 @@ const DROP_FROM = 6 // above the top of the view
 const DROP_DUR = 2.0 // seconds
 const DROP_DELAY = 0.35 // wait for the loader to finish clearing first
 
-function Crystal({ meshRef, matRef, mouse, offsetX, baseScale, dragging, dragPos, placed, started }) {
-  const tmp = useMemo(() => new THREE.Vector3(), [])
+function Crystal({ meshRef, matRef, offsetX, baseScale, spinning, spinVel, started }) {
   const introT = useRef(0)
   const wait = useRef(0)
 
@@ -113,23 +112,24 @@ function Crystal({ meshRef, matRef, mouse, offsetX, baseScale, dragging, dragPos
     if (matRef.current) matRef.current.opacity = THREE.MathUtils.clamp(p * 1.8, 0, 1)
     m.scale.setScalar(baseScale * THREE.MathUtils.lerp(0.82, 1, e))
 
-    // a single clean roll, completing exactly as it lands
+    const floatY = Math.sin(state.clock.elapsedTime * 0.5) * 0.06
+
     if (p < 1) {
+      // intro: a single clean roll that completes as it lands
       m.rotation.x = (1 - p) * Math.PI * 2.2
       m.rotation.z = 0
+      m.position.set(offsetX, THREE.MathUtils.lerp(DROP_FROM, 0.1 + floatY, e), 0)
     } else {
-      m.rotation.x = mouse.current.y * 0.3
-      m.rotation.z = mouse.current.x * 0.15
-      m.rotation.y += delta * 0.14 // ambient spin only after it settles
+      // spin from click-drag: apply angular velocity in the drag direction,
+      // with momentum that decays after release (idle drift when at rest)
+      m.rotation.y += spinVel.current.x * 0.006
+      m.rotation.x += spinVel.current.y * 0.006
+      spinVel.current.multiplyScalar(spinning.current ? 0.6 : 0.94)
+      if (!spinning.current && spinVel.current.lengthSq() < 0.02) {
+        m.rotation.y += delta * 0.12
+      }
+      m.position.set(offsetX, 0.1 + floatY, 0)
     }
-
-    const floatY = Math.sin(state.clock.elapsedTime * 0.5) * 0.06
-    if (placed.current) {
-      tmp.copy(dragPos.current)
-    } else {
-      tmp.set(offsetX, THREE.MathUtils.lerp(DROP_FROM, 0.1 + floatY, e), 0)
-    }
-    m.position.lerp(tmp, dragging.current ? 0.4 : p < 1 ? 1 : 0.09)
   })
 
   return (
@@ -197,19 +197,18 @@ function Rig({ scrollRef, started }) {
   const target = useRef(new THREE.Vector2(0, 0))
   const { viewport, camera } = useThree()
 
-  // drag state for the grabbable crystal
+  // spin state for the crystal (click + drag to rotate it)
   const meshRef = useRef()
   const matRef = useRef()
-  const dragging = useRef(false)
-  const placed = useRef(false)
-  const dragPos = useRef(new THREE.Vector3())
+  const spinning = useRef(false)
+  const spinVel = useRef(new THREE.Vector2(0, 0))
+  const last = useRef(new THREE.Vector2(0, 0))
   const ndc = useRef(new THREE.Vector2())
   const raycaster = useMemo(() => new THREE.Raycaster(), [])
-  const dragPlane = useMemo(() => new THREE.Plane(new THREE.Vector3(0, 0, 1), 0), [])
 
-  // single pointer handler: feeds cursor-parallax AND grab/drag of the
-  // crystal (window-level so it works even though the canvas is
-  // pointer-events:none and the text sits on top)
+  // single pointer handler: cursor-parallax + grab-to-spin the crystal
+  // (window-level so it works even though the canvas is pointer-events:none
+  // and the text sits on top)
   useEffect(() => {
     const setPointer = (e) => {
       const nx = (e.clientX / window.innerWidth) * 2 - 1
@@ -222,38 +221,35 @@ function Rig({ scrollRef, started }) {
       raycaster.setFromCamera(ndc.current, camera)
       return raycaster.intersectObject(meshRef.current, false).length > 0
     }
-    const toPlane = () => {
-      raycaster.setFromCamera(ndc.current, camera)
-      raycaster.ray.intersectPlane(dragPlane, dragPos.current)
-    }
     const setCursor = (v) => {
-      // body cursor = fallback when the custom cursor is off (touch / no support);
-      // dataset.cursor = signal the custom cursor reads for its grab states
       document.body.style.cursor = v
       document.documentElement.dataset.cursor = v
     }
     const onDown = (e) => {
       setPointer(e)
       if (overCrystal()) {
-        dragging.current = true
-        placed.current = true
-        toPlane()
+        spinning.current = true
+        last.current.set(e.clientX, e.clientY)
+        spinVel.current.set(0, 0)
         setCursor('grabbing')
         e.preventDefault()
       }
     }
     const onMove = (e) => {
       setPointer(e)
-      if (dragging.current) {
-        toPlane()
+      if (spinning.current) {
+        // feed the drag delta straight into angular velocity (same direction
+        // as the mouse: drag right -> spins right, drag down -> tilts down)
+        spinVel.current.set(e.clientX - last.current.x, e.clientY - last.current.y)
+        last.current.set(e.clientX, e.clientY)
         e.preventDefault()
       } else {
         setCursor(overCrystal() ? 'grab' : '')
       }
     }
     const onUp = () => {
-      if (dragging.current) {
-        dragging.current = false
+      if (spinning.current) {
+        spinning.current = false
         setCursor('')
       }
     }
@@ -265,7 +261,7 @@ function Rig({ scrollRef, started }) {
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)
     }
-  }, [camera, raycaster, dragPlane])
+  }, [camera, raycaster])
 
   useFrame((_, delta) => {
     mouse.current.lerp(target.current, Math.min(1, delta * 2.2))
@@ -286,12 +282,10 @@ function Rig({ scrollRef, started }) {
       <Crystal
         meshRef={meshRef}
         matRef={matRef}
-        mouse={mouse}
         offsetX={offsetX}
         baseScale={baseScale}
-        dragging={dragging}
-        dragPos={dragPos}
-        placed={placed}
+        spinning={spinning}
+        spinVel={spinVel}
         started={started}
       />
       <CameraRig scrollRef={scrollRef} mouse={mouse} offsetX={offsetX} />
