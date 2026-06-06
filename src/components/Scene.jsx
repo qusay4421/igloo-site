@@ -87,8 +87,9 @@ function CameraRig({ scrollRef, mouse, offsetX }) {
 // A fogged field of ice shards scattered through depth — one instanced draw
 // call. Gives the scene real parallax/volume so the camera flies THROUGH
 // space rather than arcing in front of a flat backdrop.
-function IceField() {
+function IceField({ scrollRef }) {
   const ref = useRef()
+  const matRef = useRef()
   const count = 70
   const dummy = useMemo(() => new THREE.Object3D(), [])
   const shards = useMemo(
@@ -122,12 +123,19 @@ function IceField() {
 
   useFrame((state) => {
     if (ref.current) ref.current.rotation.z = Math.sin(state.clock.elapsedTime * 0.05) * 0.06
+    // hidden at the very top (clean hero), fades in as you scroll into the field
+    if (matRef.current) {
+      matRef.current.opacity = THREE.MathUtils.smoothstep(scrollRef.current ?? 0, 0.01, 0.14)
+    }
   })
 
   return (
     <instancedMesh ref={ref} args={[undefined, undefined, count]} frustumCulled={false}>
       <icosahedronGeometry args={[1, 0]} />
       <meshStandardMaterial
+        ref={matRef}
+        transparent
+        opacity={0}
         color="#3b6e9c"
         roughness={0.4}
         metalness={0.15}
@@ -342,7 +350,7 @@ function Rig({ scrollRef, started }) {
       <Backdrop scrollRef={scrollRef} mouse={mouse} />
       <ambientLight intensity={0.35} />
       <directionalLight position={[3, 4, 5]} intensity={1.1} />
-      <IceField />
+      <IceField scrollRef={scrollRef} />
       <Crystal
         meshRef={meshRef}
         matRef={matRef}

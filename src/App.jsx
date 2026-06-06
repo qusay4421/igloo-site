@@ -133,12 +133,12 @@ export default function App() {
           />
           <h1 className="hero__title">
             <ScrambleText as="span" className="line" text="Frozen" delay={350} play={!loading} />
-            <ScrambleText as="span" className="line" text="in motion." delay={550} play={!loading} />
+            <ScrambleText as="span" className="line" text="in motion" delay={550} play={!loading} />
           </h1>
           <ScrambleText
             as="p"
             className="hero__sub"
-            text="A studio experiment in real-time graphics, building toward the immersive, tactile web. Every frame is computed, not faked."
+            text="A studio experiment in real-time graphics, building toward the immersive, tactile web, every frame computed, not faked"
             delay={950}
             speed={1.1}
             play={!loading}
@@ -159,7 +159,7 @@ export default function App() {
             className="reveal-line"
             trigger="view"
             speed={1.1}
-            text="We treat the browser as a canvas for living, breathing worlds. Shaders, physics, and motion that respond to you."
+            text="We treat the browser as a canvas for living, breathing worlds, shaders, physics, and motion that respond to you"
           />
         </section>
 
@@ -170,7 +170,7 @@ export default function App() {
             className="reveal-line"
             trigger="view"
             speed={1.1}
-            text="No templates. No stock gradients. Just hand-written GLSL, deliberate typography, and motion tuned frame by frame."
+            text="No templates, no stock gradients, just hand-written GLSL, deliberate typography, and motion tuned frame by frame"
           />
         </section>
 
@@ -181,13 +181,13 @@ export default function App() {
             className="reveal-line"
             trigger="view"
             speed={1.1}
-            text="This is iteration one. Spline scenes, 3D models, and scroll-driven cameras are coming, one refinement at a time."
+            text="This is iteration one, Spline scenes, 3D models, and scroll-driven cameras are coming, one refinement at a time"
           />
         </section>
 
         <footer className="footer">
           <span>Built with React · R3F · GLSL · GSAP</span>
-          <span>v0.24 / 2026</span>
+          <span>v0.25 / 2026</span>
         </footer>
       </main>
     </div>
