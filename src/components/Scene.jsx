@@ -255,12 +255,18 @@ function HeroModel({ meshRef, matRef, offsetX, baseScale, spinning, spinVel, sta
 
   // re-skin every mesh as frosted ice
   useLayoutEffect(() => {
-    const ice = new THREE.MeshStandardMaterial({
-      color: '#cfe8ff',
-      roughness: 0.3,
-      metalness: 0.15,
-      emissive: '#16324c',
-      emissiveIntensity: 0.35,
+    const ice = new THREE.MeshPhysicalMaterial({
+      color: '#bfe3ff',
+      roughness: 0.12,
+      metalness: 0.0,
+      clearcoat: 1.0,
+      clearcoatRoughness: 0.12,
+      transmission: 0.4,
+      thickness: 1.2,
+      ior: 1.4,
+      envMapIntensity: 2.4,
+      emissive: '#0a2238',
+      emissiveIntensity: 0.15,
       transparent: true,
       opacity: 0,
     })
@@ -269,6 +275,7 @@ function HeroModel({ meshRef, matRef, offsetX, baseScale, spinning, spinVel, sta
       if (o.isMesh) {
         o.material = ice
         o.frustumCulled = false
+        if (o.geometry) o.geometry.computeVertexNormals()
       }
     })
   }, [scene, matRef])
@@ -440,8 +447,13 @@ function Rig({ scrollRef, started }) {
     <>
       <fog attach="fog" args={['#060d1a', 7, 40]} />
       <Backdrop scrollRef={scrollRef} mouse={mouse} />
-      <ambientLight intensity={0.35} />
-      <directionalLight position={[3, 4, 5]} intensity={1.1} />
+      <ambientLight intensity={0.2} />
+      {/* warm-white key for form */}
+      <directionalLight position={[4, 6, 5]} intensity={2.2} color="#eaf6ff" />
+      {/* cool back-rim to catch the silhouette */}
+      <directionalLight position={[-6, 2, -6]} intensity={2.6} color="#4f9bff" />
+      {/* soft fill */}
+      <directionalLight position={[0, -3, 4]} intensity={0.5} color="#7fd4ff" />
       <IceField scrollRef={scrollRef} />
       <Suspense fallback={null}>
         <HeroModel
