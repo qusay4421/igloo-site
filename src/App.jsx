@@ -185,9 +185,24 @@ export default function App() {
           />
         </section>
 
+        <section className="section closing" id="end">
+          <ScrambleText
+            as="p"
+            className="closing-line"
+            trigger="view"
+            speed={1.1}
+            text="The ice keeps moving, so do we"
+          />
+          <Magnetic>
+            <a className="closing-cta" href="#" onMouseEnter={() => audio.tick(1400)}>
+              Start a project
+            </a>
+          </Magnetic>
+        </section>
+
         <footer className="footer">
           <span>Built with React · R3F · GLSL · GSAP</span>
-          <span>v0.29 / 2026</span>
+          <span>v0.30 / 2026</span>
         </footer>
       </main>
     </div>

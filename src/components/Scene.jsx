@@ -328,6 +328,41 @@ function HeroModel({ meshRef, matRef, offsetX, baseScale, spinning, spinVel, sta
 }
 useGLTF.preload('/models/fox.glb')
 
+// Arrival beat: a big faceted ice monolith at the end of the corridor that
+// fades in as the camera approaches the bottom of the page.
+function EndMonument({ scrollRef }) {
+  const ref = useRef()
+  const matRef = useRef()
+  useFrame((state, delta) => {
+    if (ref.current) {
+      ref.current.rotation.y += delta * 0.05
+      ref.current.rotation.x = Math.sin(state.clock.elapsedTime * 0.1) * 0.1
+    }
+    if (matRef.current) {
+      matRef.current.opacity = THREE.MathUtils.smoothstep(scrollRef.current ?? 0, 0.55, 0.92)
+    }
+  })
+  return (
+    <mesh ref={ref} position={[0, 0, -31]} scale={5}>
+      <icosahedronGeometry args={[1, 0]} />
+      <meshPhysicalMaterial
+        ref={matRef}
+        transparent
+        opacity={0}
+        flatShading
+        color="#bfe3ff"
+        roughness={0.1}
+        metalness={0}
+        clearcoat={1}
+        clearcoatRoughness={0.12}
+        envMapIntensity={2.4}
+        emissive="#0a2238"
+        emissiveIntensity={0.2}
+      />
+    </mesh>
+  )
+}
+
 function IceEnvironment() {
   return (
     <Environment resolution={256}>
@@ -456,6 +491,7 @@ function Rig({ scrollRef, started }) {
       {/* soft fill */}
       <directionalLight position={[0, -3, 4]} intensity={0.5} color="#7fd4ff" />
       <IceField scrollRef={scrollRef} />
+      <EndMonument scrollRef={scrollRef} />
       <Suspense fallback={null}>
         <HeroModel
           meshRef={meshRef}
