@@ -1,6 +1,12 @@
-import { useRef, useMemo, useEffect, useState, useLayoutEffect } from 'react'
+import { useRef, useMemo, useEffect, useState, useLayoutEffect, Suspense } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { Environment, Lightformer, MeshTransmissionMaterial } from '@react-three/drei'
+import {
+  Environment,
+  Lightformer,
+  MeshTransmissionMaterial,
+  useGLTF,
+  useAnimations,
+} from '@react-three/drei'
 import {
   EffectComposer,
   Bloom,
@@ -229,6 +235,92 @@ function Crystal({ meshRef, matRef, offsetX, baseScale, spinning, spinVel, start
   )
 }
 
+// Hero asset: an arctic-fox GLB re-skinned as a frosted ice sculpture.
+// Auto-normalizes scale/centre, plays its idle animation, and reuses the
+// same drop-in intro + grab-to-spin as the old crystal (groupRef = meshRef).
+function HeroModel({ meshRef, matRef, offsetX, baseScale, spinning, spinVel, started }) {
+  const { scene, animations } = useGLTF('/models/fox.glb')
+  const { actions, names } = useAnimations(animations, meshRef)
+  const introT = useRef(0)
+  const wait = useRef(0)
+
+  // fit to a consistent size + recentre, regardless of the model's own units
+  const { fitScale, center } = useMemo(() => {
+    const box = new THREE.Box3().setFromObject(scene)
+    const size = box.getSize(new THREE.Vector3())
+    const c = box.getCenter(new THREE.Vector3())
+    const maxDim = Math.max(size.x, size.y, size.z)
+    return { fitScale: 3.0 / maxDim, center: c }
+  }, [scene])
+
+  // re-skin every mesh as frosted ice
+  useLayoutEffect(() => {
+    const ice = new THREE.MeshStandardMaterial({
+      color: '#cfe8ff',
+      roughness: 0.3,
+      metalness: 0.15,
+      emissive: '#16324c',
+      emissiveIntensity: 0.35,
+      transparent: true,
+      opacity: 0,
+    })
+    matRef.current = ice
+    scene.traverse((o) => {
+      if (o.isMesh) {
+        o.material = ice
+        o.frustumCulled = false
+      }
+    })
+  }, [scene, matRef])
+
+  // play the idle ("Survey") animation, slowed down
+  useEffect(() => {
+    const a = names[0] && actions[names[0]]
+    if (a) {
+      a.reset().play()
+      a.timeScale = 0.55
+    }
+  }, [actions, names])
+
+  useFrame((state, delta) => {
+    const g = meshRef.current
+    if (!g) return
+    g.scale.setScalar(baseScale * fitScale)
+
+    if (!started || wait.current < DROP_DELAY) {
+      if (started) wait.current += delta
+      g.position.set(offsetX, 0.9, 0)
+      if (matRef.current) matRef.current.opacity = 0
+      return
+    }
+
+    if (introT.current < 1) introT.current = Math.min(1, introT.current + delta / 1.3)
+    const p = introT.current
+    if (matRef.current) matRef.current.opacity = THREE.MathUtils.clamp(p * 1.6, 0, 1)
+
+    // grab-to-spin (world axes) with momentum + gentle idle turn
+    g.rotateOnWorldAxis(WORLD_Y, spinVel.current.x * 0.006)
+    g.rotateOnWorldAxis(WORLD_X, spinVel.current.y * 0.006)
+    spinVel.current.multiplyScalar(spinning.current ? 0.6 : 0.94)
+    if (!spinning.current && spinVel.current.lengthSq() < 0.02) {
+      g.rotateOnWorldAxis(WORLD_Y, delta * 0.15)
+    }
+
+    const floatY = Math.sin(state.clock.elapsedTime * 0.5) * 0.05
+    g.position.set(offsetX, THREE.MathUtils.lerp(0.9, 0.1 + floatY, easeInOutSine(p)), 0)
+  })
+
+  return (
+    <group ref={meshRef} position={[offsetX, 0.1, 0]}>
+      {/* inner group recentres the model on its bounding-box centre */}
+      <group position={[-center.x, -center.y, -center.z]} rotation={[0, Math.PI * 0.25, 0]}>
+        <primitive object={scene} />
+      </group>
+    </group>
+  )
+}
+useGLTF.preload('/models/fox.glb')
+
 function IceEnvironment() {
   return (
     <Environment resolution={256}>
@@ -289,7 +381,7 @@ function Rig({ scrollRef, started }) {
     const overCrystal = () => {
       if (!meshRef.current) return false
       raycaster.setFromCamera(ndc.current, camera)
-      return raycaster.intersectObject(meshRef.current, false).length > 0
+      return raycaster.intersectObject(meshRef.current, true).length > 0
     }
     const setCursor = (v) => {
       document.body.style.cursor = v
@@ -351,15 +443,17 @@ function Rig({ scrollRef, started }) {
       <ambientLight intensity={0.35} />
       <directionalLight position={[3, 4, 5]} intensity={1.1} />
       <IceField scrollRef={scrollRef} />
-      <Crystal
-        meshRef={meshRef}
-        matRef={matRef}
-        offsetX={offsetX}
-        baseScale={baseScale}
-        spinning={spinning}
-        spinVel={spinVel}
-        started={started}
-      />
+      <Suspense fallback={null}>
+        <HeroModel
+          meshRef={meshRef}
+          matRef={matRef}
+          offsetX={offsetX}
+          baseScale={baseScale}
+          spinning={spinning}
+          spinVel={spinVel}
+          started={started}
+        />
+      </Suspense>
       <CameraRig scrollRef={scrollRef} mouse={mouse} offsetX={offsetX} />
       <IceEnvironment />
     </>

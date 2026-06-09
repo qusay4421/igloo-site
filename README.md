@@ -39,6 +39,12 @@ npm run build    # production bundle
 5. **Custom cursor + magnetic interactions + page transitions.**
 6. **Audio-reactive / UI sound design**, preloader, performance budget (LOD, lazy).
 
+## Credits
+
+- Hero model: "Fox" from the Khronos glTF Sample Assets. Model by PixelMannen
+  (CC0); rig + animations by Tom Kranis (CC-BY 4.0); glTF conversion by
+  AsoboStudio / Microsoft. Re-skinned here as a frosted ice material.
+
 ## Asset sources
 
 Poly Haven (HDRIs/textures, CC0), Sketchfab / poly.pizza / Quaternius (models),
