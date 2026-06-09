@@ -440,7 +440,8 @@ function Rig({ scrollRef, started }) {
   // (centred + smaller on mobile)
   const isNarrow = viewport.aspect < 1.0
   const baseScale = isNarrow ? 0.6 : 0.9
-  const margin = 1.35 * baseScale + 0.35
+  // smaller margin = sits further toward the right edge (a little bleed is fine)
+  const margin = 1.0 * baseScale + 0.1
   const offsetX = isNarrow ? 0 : viewport.width * 0.5 - margin
 
   return (
