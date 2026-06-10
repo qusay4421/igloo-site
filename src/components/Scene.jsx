@@ -66,18 +66,20 @@ function CameraRig({ scrollRef, mouse, offsetX }) {
   // Smooth continuous path (Catmull-Rom) through composed per-section
   // framings — no corners, no holds. Gentle forward flow like before.
   const { posCurve, lookCurve, nSeg } = useMemo(() => {
+    // each framing is a distinct turn (alternating sides/heights) so every
+    // section's settle reads as its own composed shot, not a continuous drift
     const pos = [
-      [0, 0, 5],
-      [-1.2, 0.4, -1],
-      [1.3, -0.4, -7],
-      [-1.0, 0.8, -13],
-      [0, -0.3, -20],
+      [0, 0, 5], // hero — centred, framing the fox on the right
+      [-2.2, -0.6, -1], // approach — low, swung left
+      [2.2, 0.4, -7], // craft — high, banked right
+      [-2.0, 1.0, -13], // next — higher, swung back left
+      [0, -0.4, -20], // end — recentre, descend to the monolith
     ].map((p) => new THREE.Vector3(p[0], p[1], p[2]))
     const look = [
       [offsetX * 0.7, 0, -1],
-      [-2, 0.2, -7],
-      [2.5, -0.3, -13],
-      [-1, 0.5, -20],
+      [-3.5, -0.8, -7],
+      [3.6, 0.2, -13],
+      [-3.0, 0.8, -19],
       [0, -2.0, -34],
     ].map((p) => new THREE.Vector3(p[0], p[1], p[2]))
     return {
@@ -134,7 +136,7 @@ function CameraRig({ scrollRef, mouse, offsetX }) {
     const span = Math.max(1e-4, b[i + 1] - b[i])
     const t = THREE.MathUtils.clamp((sv - b[i]) / span, 0, 1)
     const smoother = t * t * t * (t * (t * 6 - 15) + 10)
-    const tt = THREE.MathUtils.lerp(t, smoother, 0.85) // strong, felt settle
+    const tt = THREE.MathUtils.lerp(t, smoother, 0.9) // strong, felt settle
     const u = (i + tt) / nSeg
 
     posCurve.getPoint(u, camPos)
