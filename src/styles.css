@@ -358,7 +358,8 @@ canvas {
   line-height: 1.1;
   letter-spacing: -0.02em;
   max-width: 16ch;
-  text-shadow: 0 0 30px rgba(127, 212, 255, 0.3);
+  /* dark halo keeps light text readable over any bright ice behind it */
+  text-shadow: 0 2px 26px rgba(0, 0, 0, 0.55), 0 0 30px rgba(127, 212, 255, 0.22);
 }
 .closing-cta {
   display: inline-block;

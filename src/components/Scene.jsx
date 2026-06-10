@@ -339,25 +339,27 @@ function EndMonument({ scrollRef }) {
       ref.current.rotation.x = Math.sin(state.clock.elapsedTime * 0.1) * 0.1
     }
     if (matRef.current) {
-      matRef.current.opacity = THREE.MathUtils.smoothstep(scrollRef.current ?? 0, 0.55, 0.92)
+      matRef.current.opacity =
+        THREE.MathUtils.smoothstep(scrollRef.current ?? 0, 0.55, 0.92) * 0.9
     }
   })
   return (
-    <mesh ref={ref} position={[0, 0, -31]} scale={5}>
+    // distant + lower so it reads as a destination, not a wall behind the text
+    <mesh ref={ref} position={[0, -2.2, -37]} scale={3}>
       <icosahedronGeometry args={[1, 0]} />
       <meshPhysicalMaterial
         ref={matRef}
         transparent
         opacity={0}
         flatShading
-        color="#bfe3ff"
-        roughness={0.1}
+        color="#356596"
+        roughness={0.16}
         metalness={0}
         clearcoat={1}
-        clearcoatRoughness={0.12}
-        envMapIntensity={2.4}
-        emissive="#0a2238"
-        emissiveIntensity={0.2}
+        clearcoatRoughness={0.15}
+        envMapIntensity={1.5}
+        emissive="#081d33"
+        emissiveIntensity={0.25}
       />
     </mesh>
   )
