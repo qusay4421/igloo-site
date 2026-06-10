@@ -87,18 +87,54 @@ function CameraRig({ scrollRef, mouse, offsetX }) {
     }
   }, [offsetX])
 
+  // scroll-progress breakpoints where each framing should land — tied to the
+  // actual on-page centre of each section so the settle lines up with the text
+  const bp = useRef([0, 0.25, 0.5, 0.75, 1])
+  useEffect(() => {
+    const compute = () => {
+      const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight)
+      const prog = (sel) => {
+        const el = document.querySelector(sel)
+        if (!el) return null
+        const r = el.getBoundingClientRect()
+        const center = r.top + window.scrollY + r.height / 2
+        return THREE.MathUtils.clamp((center - window.innerHeight / 2) / maxScroll, 0, 1)
+      }
+      const arr = [0]
+      for (const id of ['#approach', '#craft', '#next', '#end']) {
+        const p = prog(id)
+        if (p != null) arr.push(p)
+      }
+      while (arr.length < nSeg + 1) arr.push(1)
+      arr[arr.length - 1] = 1
+      // enforce monotonic increasing
+      for (let k = 1; k < arr.length; k++) arr[k] = Math.max(arr[k], arr[k - 1] + 0.001)
+      bp.current = arr
+    }
+    compute()
+    const t = setTimeout(compute, 500)
+    window.addEventListener('resize', compute)
+    return () => {
+      clearTimeout(t)
+      window.removeEventListener('resize', compute)
+    }
+  }, [nSeg])
+
   useFrame((_, delta) => {
     const raw = THREE.MathUtils.clamp(scrollRef.current ?? 0, 0, 1)
     // single smoother -> deterministic camera (retraces cleanly)
     s.current = THREE.MathUtils.damp(s.current, raw, 8, delta)
+    const sv = s.current
 
-    // map scroll along the curve, but ease velocity DOWN only near each
-    // framing (a subtle settle), staying continuous and scroll-locked between
-    const sf = THREE.MathUtils.clamp(s.current, 0, 1) * nSeg
-    const i = Math.min(Math.floor(sf), nSeg - 1)
-    const t = sf - i
+    // pick the segment between section breakpoints, then a strong velocity
+    // settle so the camera composes the shot right as its section centres
+    const b = bp.current
+    let i = 0
+    while (i < nSeg - 1 && sv >= b[i + 1]) i++
+    const span = Math.max(1e-4, b[i + 1] - b[i])
+    const t = THREE.MathUtils.clamp((sv - b[i]) / span, 0, 1)
     const smoother = t * t * t * (t * (t * 6 - 15) + 10)
-    const tt = THREE.MathUtils.lerp(t, smoother, 0.55) // 0 = no settle, 1 = full
+    const tt = THREE.MathUtils.lerp(t, smoother, 0.85) // strong, felt settle
     const u = (i + tt) / nSeg
 
     posCurve.getPoint(u, camPos)
