@@ -63,26 +63,44 @@ function CameraRig({ scrollRef, mouse, offsetX }) {
   const camPos = useMemo(() => new THREE.Vector3(0, 0, 5), [])
   const target = useMemo(() => new THREE.Vector3(0, 0, 0), [])
 
+  // composed "stops", one per section: { p: camera pos, l: look-at }. The
+  // camera holds at each, then transitions to the next (staged, not a glide).
+  const STOPS = useMemo(
+    () => [
+      { p: [0, 0, 5], l: [offsetX * 0.7, 0, -1] }, // hero — frame the fox
+      { p: [-2.4, 0.6, -1], l: [-3.5, 0.2, -7] }, // approach — sweep left
+      { p: [2.6, -0.6, -7], l: [4, -0.4, -13] }, // craft — bank right
+      { p: [-1.8, 1.1, -13], l: [-1.5, 0.5, -20] }, // next — rise, look ahead
+      { p: [0, -0.4, -20], l: [0, -2.0, -34] }, // end — arrive at the monolith
+    ],
+    [offsetX]
+  )
+
   useFrame((_, delta) => {
     const raw = THREE.MathUtils.clamp(scrollRef.current ?? 0, 0, 1)
-    // single smoother on the scroll value; the camera is then a pure
-    // deterministic function of it, so the path is identical up and down
-    // (no compounding lag / no failing to retrace on fast scroll)
+    // single smoother on the scroll value -> deterministic camera (retraces)
     s.current = THREE.MathUtils.damp(s.current, raw, 8, delta)
-    const e = THREE.MathUtils.smoothstep(s.current, 0, 1)
+
+    const nSeg = STOPS.length - 1
+    const sf = THREE.MathUtils.clamp(s.current, 0, 1) * nSeg
+    const i = Math.min(Math.floor(sf), nSeg - 1)
+    const t = sf - i
+    // hold near each stop (flat ends), transition through the middle
+    const e = THREE.MathUtils.smoothstep(t, 0.32, 0.68)
+    const a = STOPS[i]
+    const b = STOPS[i + 1]
 
     camPos.set(
-      Math.sin(e * Math.PI * 1.4) * 1.4 + mouse.current.x * 0.4,
-      THREE.MathUtils.lerp(0, 1.0, e) + mouse.current.y * 0.4,
-      THREE.MathUtils.lerp(5, -22, e) // travel forward through the field
+      THREE.MathUtils.lerp(a.p[0], b.p[0], e) + mouse.current.x * 0.35,
+      THREE.MathUtils.lerp(a.p[1], b.p[1], e) + mouse.current.y * 0.35,
+      THREE.MathUtils.lerp(a.p[2], b.p[2], e)
     )
     camera.position.copy(camPos)
 
-    // look at the crystal first, then ahead down the corridor
     target.set(
-      THREE.MathUtils.lerp(offsetX * 0.7, 0, THREE.MathUtils.smoothstep(s.current, 0, 0.4)),
-      0,
-      camPos.z - 6
+      THREE.MathUtils.lerp(a.l[0], b.l[0], e),
+      THREE.MathUtils.lerp(a.l[1], b.l[1], e),
+      THREE.MathUtils.lerp(a.l[2], b.l[2], e)
     )
     camera.lookAt(target)
   })
