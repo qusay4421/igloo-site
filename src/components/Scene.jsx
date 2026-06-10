@@ -63,88 +63,25 @@ function CameraRig({ scrollRef, mouse, offsetX }) {
   const camPos = useMemo(() => new THREE.Vector3(0, 0, 5), [])
   const target = useMemo(() => new THREE.Vector3(0, 0, 0), [])
 
-  // Smooth continuous path (Catmull-Rom) through composed per-section
-  // framings — no corners, no holds. Gentle forward flow like before.
-  const { posCurve, lookCurve, nSeg } = useMemo(() => {
-    // each framing is a distinct turn (alternating sides/heights) so every
-    // section's settle reads as its own composed shot, not a continuous drift
-    const pos = [
-      [0, 0, 5], // hero — centred, framing the fox on the right
-      [-2.2, -0.6, -1], // approach — low, swung left
-      [2.2, 0.4, -7], // craft — high, banked right
-      [-2.0, 1.0, -13], // next — higher, swung back left
-      [0, -0.4, -20], // end — recentre, descend to the monolith
-    ].map((p) => new THREE.Vector3(p[0], p[1], p[2]))
-    const look = [
-      [offsetX * 0.7, 0, -1],
-      [-3.5, -0.8, -7],
-      [3.6, 0.2, -13],
-      [-3.0, 0.8, -19],
-      [0, -2.0, -34],
-    ].map((p) => new THREE.Vector3(p[0], p[1], p[2]))
-    return {
-      posCurve: new THREE.CatmullRomCurve3(pos, false, 'catmullrom', 0.5),
-      lookCurve: new THREE.CatmullRomCurve3(look, false, 'catmullrom', 0.5),
-      nSeg: pos.length - 1,
-    }
-  }, [offsetX])
-
-  // scroll-progress breakpoints where each framing should land — tied to the
-  // actual on-page centre of each section so the settle lines up with the text
-  const bp = useRef([0, 0.25, 0.5, 0.75, 1])
-  useEffect(() => {
-    const compute = () => {
-      const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight)
-      const prog = (sel) => {
-        const el = document.querySelector(sel)
-        if (!el) return null
-        const r = el.getBoundingClientRect()
-        const center = r.top + window.scrollY + r.height / 2
-        return THREE.MathUtils.clamp((center - window.innerHeight / 2) / maxScroll, 0, 1)
-      }
-      const arr = [0]
-      for (const id of ['#approach', '#craft', '#next', '#end']) {
-        const p = prog(id)
-        if (p != null) arr.push(p)
-      }
-      while (arr.length < nSeg + 1) arr.push(1)
-      arr[arr.length - 1] = 1
-      // enforce monotonic increasing
-      for (let k = 1; k < arr.length; k++) arr[k] = Math.max(arr[k], arr[k - 1] + 0.001)
-      bp.current = arr
-    }
-    compute()
-    const t = setTimeout(compute, 500)
-    window.addEventListener('resize', compute)
-    return () => {
-      clearTimeout(t)
-      window.removeEventListener('resize', compute)
-    }
-  }, [nSeg])
-
   useFrame((_, delta) => {
     const raw = THREE.MathUtils.clamp(scrollRef.current ?? 0, 0, 1)
-    // single smoother -> deterministic camera (retraces cleanly)
+    // single smoother on the scroll value; deterministic continuous flow
     s.current = THREE.MathUtils.damp(s.current, raw, 8, delta)
-    const sv = s.current
+    const e = THREE.MathUtils.smoothstep(s.current, 0, 1)
 
-    // pick the segment between section breakpoints, then a strong velocity
-    // settle so the camera composes the shot right as its section centres
-    const b = bp.current
-    let i = 0
-    while (i < nSeg - 1 && sv >= b[i + 1]) i++
-    const span = Math.max(1e-4, b[i + 1] - b[i])
-    const t = THREE.MathUtils.clamp((sv - b[i]) / span, 0, 1)
-    const smoother = t * t * t * (t * (t * 6 - 15) + 10)
-    const tt = THREE.MathUtils.lerp(t, smoother, 0.9) // strong, felt settle
-    const u = (i + tt) / nSeg
-
-    posCurve.getPoint(u, camPos)
-    camPos.x += mouse.current.x * 0.35
-    camPos.y += mouse.current.y * 0.35
+    camPos.set(
+      Math.sin(e * Math.PI * 1.4) * 1.4 + mouse.current.x * 0.4,
+      THREE.MathUtils.lerp(0, 1.0, e) + mouse.current.y * 0.4,
+      THREE.MathUtils.lerp(5, -22, e) // travel forward through the field
+    )
     camera.position.copy(camPos)
 
-    lookCurve.getPoint(u, target)
+    // look at the fox first, then ahead down the corridor
+    target.set(
+      THREE.MathUtils.lerp(offsetX * 0.7, 0, THREE.MathUtils.smoothstep(s.current, 0, 0.4)),
+      0,
+      camPos.z - 6
+    )
     camera.lookAt(target)
   })
 
