@@ -63,45 +63,50 @@ function CameraRig({ scrollRef, mouse, offsetX }) {
   const camPos = useMemo(() => new THREE.Vector3(0, 0, 5), [])
   const target = useMemo(() => new THREE.Vector3(0, 0, 0), [])
 
-  // composed "stops", one per section: { p: camera pos, l: look-at }. The
-  // camera holds at each, then transitions to the next (staged, not a glide).
-  const STOPS = useMemo(
-    () => [
-      { p: [0, 0, 5], l: [offsetX * 0.7, 0, -1] }, // hero — frame the fox
-      { p: [-2.4, 0.6, -1], l: [-3.5, 0.2, -7] }, // approach — sweep left
-      { p: [2.6, -0.6, -7], l: [4, -0.4, -13] }, // craft — bank right
-      { p: [-1.8, 1.1, -13], l: [-1.5, 0.5, -20] }, // next — rise, look ahead
-      { p: [0, -0.4, -20], l: [0, -2.0, -34] }, // end — arrive at the monolith
-    ],
-    [offsetX]
-  )
+  // Smooth continuous path (Catmull-Rom) through composed per-section
+  // framings — no corners, no holds. Gentle forward flow like before.
+  const { posCurve, lookCurve, nSeg } = useMemo(() => {
+    const pos = [
+      [0, 0, 5],
+      [-1.2, 0.4, -1],
+      [1.3, -0.4, -7],
+      [-1.0, 0.8, -13],
+      [0, -0.3, -20],
+    ].map((p) => new THREE.Vector3(p[0], p[1], p[2]))
+    const look = [
+      [offsetX * 0.7, 0, -1],
+      [-2, 0.2, -7],
+      [2.5, -0.3, -13],
+      [-1, 0.5, -20],
+      [0, -2.0, -34],
+    ].map((p) => new THREE.Vector3(p[0], p[1], p[2]))
+    return {
+      posCurve: new THREE.CatmullRomCurve3(pos, false, 'catmullrom', 0.5),
+      lookCurve: new THREE.CatmullRomCurve3(look, false, 'catmullrom', 0.5),
+      nSeg: pos.length - 1,
+    }
+  }, [offsetX])
 
   useFrame((_, delta) => {
     const raw = THREE.MathUtils.clamp(scrollRef.current ?? 0, 0, 1)
-    // single smoother on the scroll value -> deterministic camera (retraces)
+    // single smoother -> deterministic camera (retraces cleanly)
     s.current = THREE.MathUtils.damp(s.current, raw, 8, delta)
 
-    const nSeg = STOPS.length - 1
+    // map scroll along the curve, but ease velocity DOWN only near each
+    // framing (a subtle settle), staying continuous and scroll-locked between
     const sf = THREE.MathUtils.clamp(s.current, 0, 1) * nSeg
     const i = Math.min(Math.floor(sf), nSeg - 1)
     const t = sf - i
-    // hold near each stop (flat ends), transition through the middle
-    const e = THREE.MathUtils.smoothstep(t, 0.32, 0.68)
-    const a = STOPS[i]
-    const b = STOPS[i + 1]
+    const smoother = t * t * t * (t * (t * 6 - 15) + 10)
+    const tt = THREE.MathUtils.lerp(t, smoother, 0.55) // 0 = no settle, 1 = full
+    const u = (i + tt) / nSeg
 
-    camPos.set(
-      THREE.MathUtils.lerp(a.p[0], b.p[0], e) + mouse.current.x * 0.35,
-      THREE.MathUtils.lerp(a.p[1], b.p[1], e) + mouse.current.y * 0.35,
-      THREE.MathUtils.lerp(a.p[2], b.p[2], e)
-    )
+    posCurve.getPoint(u, camPos)
+    camPos.x += mouse.current.x * 0.35
+    camPos.y += mouse.current.y * 0.35
     camera.position.copy(camPos)
 
-    target.set(
-      THREE.MathUtils.lerp(a.l[0], b.l[0], e),
-      THREE.MathUtils.lerp(a.l[1], b.l[1], e),
-      THREE.MathUtils.lerp(a.l[2], b.l[2], e)
-    )
+    lookCurve.getPoint(u, target)
     camera.lookAt(target)
   })
 
